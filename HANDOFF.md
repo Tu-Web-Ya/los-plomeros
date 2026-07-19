@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se equilibraron los márgenes superior e inferior de la animación de texto rotativo en `animated-hero.tsx`, centrándola verticalmente de forma simétrica entre el título "PLOMERÍA" y el subtítulo "DE CONFIANZA".
+- Se migró la alineación del texto rotativo en `animated-hero.tsx` a un contenedor CSS Grid (`place-items-center`) con márgenes simétricos `my-3 sm:my-4`, eliminando choques de posicionamiento absoluto y garantizando un centrado perfecto y equilibrado entre "PLOMERÍA" y "DE CONFIANZA".
+
 
 
 

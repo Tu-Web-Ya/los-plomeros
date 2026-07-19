@@ -59,23 +59,23 @@ function Hero() {
           
           <div className="flex gap-6 flex-col max-w-4xl">
             <h1 className="text-4xl sm:text-6xl md:text-8xl tracking-tight font-extrabold text-white leading-[1.1] md:leading-[1.05] flex flex-col items-center">
-              <span className="block font-bold mb-2 md:mb-3">PLOMERÍA</span>
-              <span className="relative flex w-full items-center justify-center overflow-hidden h-14 sm:h-20 md:h-24 my-1 text-center font-black">
-                &nbsp;
+              <span className="block font-bold">PLOMERÍA</span>
+              
+              <span className="grid grid-cols-1 grid-rows-1 place-items-center w-full overflow-hidden h-16 sm:h-20 md:h-24 my-3 sm:my-4 font-black">
                 {titles.map((title, index) => (
                   <motion.span
                     key={index}
-                    className="absolute text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-amber-500 w-full left-0 right-0 text-center text-3xl sm:text-5xl md:text-6xl lg:text-7xl flex items-center justify-center top-1/2 -translate-y-1/2"
-                    initial={{ opacity: 0, y: -100 }}
+                    className="col-start-1 row-start-1 text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-amber-500 w-full text-center text-3xl sm:text-5xl md:text-6xl lg:text-7xl"
+                    initial={{ opacity: 0, y: -80 }}
                     transition={{ type: "spring", stiffness: 60, damping: 12 }}
                     animate={
                       titleNumber === index
                         ? {
-                            y: "-50%",
+                            y: 0,
                             opacity: 1,
                           }
                         : {
-                            y: titleNumber > index ? "-180%" : "180%",
+                            y: titleNumber > index ? -100 : 100,
                             opacity: 0,
                           }
                     }
@@ -84,7 +84,8 @@ function Hero() {
                   </motion.span>
                 ))}
               </span>
-              <span className="block text-2xl sm:text-4xl md:text-5xl font-medium text-zinc-300 tracking-normal mt-2 md:mt-3">
+
+              <span className="block text-2xl sm:text-4xl md:text-5xl font-medium text-zinc-300 tracking-normal">
                 DE CONFIANZA
               </span>
             </h1>
