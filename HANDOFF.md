@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se reajustó la zona de exclusión central en `InteractivePipes.tsx` a una ventana cuadrada equilibrada (600px x 600px max) para acercar las tuberías a los costados izquierdo y derecho del texto del Hero y evitar franjas vacías en pantallas anchas.
+- Se reajustó la dimensión de exclusión central en `InteractivePipes.tsx` a `720px × 540px` max, proporcionando un margen de respiración ("espacio personal") cómodo alrededor del texto del Hero sin apretar las líneas ni dejar huecos excesivos.
+
 
 
 

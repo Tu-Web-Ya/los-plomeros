@@ -70,10 +70,9 @@ export function InteractivePipes() {
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // Perfectly balanced square clearance zone around center text (e.g. 560px x 560px)
-      const squareSize = Math.min(width * 0.52, height * 0.72, 600);
-      const clearWidth = squareSize;
-      const clearHeight = squareSize;
+      // Refined goldilocks clearance zone: comfortable breathing room without large empty gaps
+      const clearWidth = Math.min(width * 0.60, 720);
+      const clearHeight = Math.min(height * 0.75, 540);
 
       const isInCenterZone = (px: number, py: number) => {
         return (
@@ -89,13 +88,13 @@ export function InteractivePipes() {
           const x = c * spacingX;
           const y = r * spacingY;
 
-          // Reject any point inside the center square
+          // Reject any point inside the center zone
           if (isInCenterZone(x, y)) continue;
 
           const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.35;
           joints.push({ x, y, hasGauge, pressureVal: 0.4 + Math.random() * 0.5 });
 
-          // Horizontal pipe segment (must stay outside center square)
+          // Horizontal pipe segment
           if (c < cols && Math.random() > 0.15) {
             const nextX = x + spacingX;
             if (
@@ -113,7 +112,7 @@ export function InteractivePipes() {
             }
           }
 
-          // Vertical pipe segment (must stay outside center square)
+          // Vertical pipe segment
           if (r < rows && Math.random() > 0.15) {
             const nextY = y + spacingY;
             if (
