@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se aplicó aceleración por GPU (`willChange: transform`, `translateZ(0)`) a la manija de la pluma/grifo en `WaterSplashLoader.tsx` y se removió la propiedad `shadowBlur` del bucle de partículas de agua para garantizar una rotación de la manija 100% fluida a 60 FPS sin tirones.
+- Se eliminó el conflicto entre las transformaciones CSS en línea (`style.transform`) y la animación de Framer Motion en `WaterSplashLoader.tsx`, solucionando el salto/glitch inicial de centrado de la manija del grifo al cargar la página.
+
 
 
 

@@ -227,15 +227,9 @@ export function WaterSplashLoader({ onComplete }: WaterSplashLoaderProps) {
                   }
             }
           >
+            {/* Contenedor del Grifo completo */}
             <motion.div
-              className="absolute left-1/2 w-80 h-[300px] sm:w-[380px] sm:h-[358px]"
-              style={{
-                top: "50%",
-                perspective: 1000,
-                transformStyle: "preserve-3d",
-                transform: "translate3d(-50%, -50%, 0)",
-                willChange: "transform",
-              }}
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-80 h-[300px] sm:w-[380px] sm:h-[358px]"
               whileHover={!isClicked ? { scale: 1.03 } : {}}
               whileTap={!isClicked ? { scale: 0.97 } : {}}
               transition={{ type: "spring", stiffness: 400, damping: 25 }}
@@ -244,7 +238,6 @@ export function WaterSplashLoader({ onComplete }: WaterSplashLoaderProps) {
                 src="/tap_body_extended.png"
                 alt="Cuerpo del Grifo"
                 className="absolute top-0 left-0 w-full h-auto z-10 filter drop-shadow-[0_8px_25px_rgba(0,0,0,0.55)] select-none pointer-events-none"
-                style={{ transform: "translateZ(0)", willChange: "transform" }}
               />
 
               <motion.img
@@ -253,9 +246,6 @@ export function WaterSplashLoader({ onComplete }: WaterSplashLoaderProps) {
                 className="absolute top-0 left-0 w-full h-auto z-20 pointer-events-none select-none"
                 style={{
                   transformOrigin: "50% 2.743%",
-                  transformStyle: "preserve-3d",
-                  transform: "translateZ(0)",
-                  willChange: "transform",
                 }}
                 initial={{ scale: 0.6, opacity: 0, rotateY: 0 }}
                 animate={
@@ -275,7 +265,7 @@ export function WaterSplashLoader({ onComplete }: WaterSplashLoaderProps) {
                   isClicked
                     ? {
                         duration: 1.1,
-                        ease: [0.25, 1, 0.5, 1], // Ultra-smooth cubic bezier easing
+                        ease: [0.25, 1, 0.5, 1],
                       }
                     : {
                         type: "spring",
