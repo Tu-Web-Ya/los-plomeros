@@ -27,6 +27,7 @@ export function InteractivePipes() {
       x2: number;
       y2: number;
       thickness: number;
+      angle: number;
     }
 
     interface Leak {
@@ -40,9 +41,37 @@ export function InteractivePipes() {
       repairTextTimer: number;
     }
 
+    interface Roach {
+      segIndex: number;
+      t: number; // 0 to 1 along segment
+      dir: number; // 1 or -1
+      speed: number;
+      legPhase: number;
+      size: number;
+    }
+
+    interface Rat {
+      jointIndex: number;
+      peekProgress: number;
+      state: "hidden" | "peeking" | "watching" | "ducking";
+      timer: number;
+      whiskerPhase: number;
+      lookOffset: number;
+    }
+
     let segments: Segment[] = [];
     let joints: { x: number; y: number; hasGauge: boolean; pressureVal: number }[] = [];
     let leaks: Leak[] = [];
+    let roaches: Roach[] = [];
+    let rat: Rat = {
+      jointIndex: -1,
+      peekProgress: 0,
+      state: "hidden",
+      timer: 100,
+      whiskerPhase: 0,
+      lookOffset: 0,
+    };
+
     let nextLeakId = 1;
     let wrenchAngle = 0;
     let isHoveringLeak = false;
@@ -70,7 +99,7 @@ export function InteractivePipes() {
       const centerX = width / 2;
       const centerY = height / 2;
 
-      // Refined goldilocks clearance zone: comfortable breathing room without large empty gaps
+      // Refined clearance zone for Hero text
       const clearWidth = Math.min(width * 0.60, 720);
       const clearHeight = Math.min(height * 0.75, 540);
 
@@ -88,7 +117,6 @@ export function InteractivePipes() {
           const x = c * spacingX;
           const y = r * spacingY;
 
-          // Reject any point inside the center zone
           if (isInCenterZone(x, y)) continue;
 
           const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.35;
@@ -108,6 +136,7 @@ export function InteractivePipes() {
                 x2: nextX,
                 y2: y,
                 thickness: 9,
+                angle: 0,
               });
             }
           }
@@ -126,13 +155,14 @@ export function InteractivePipes() {
                 x2: x,
                 y2: nextY,
                 thickness: 9,
+                angle: Math.PI / 2,
               });
             }
           }
         }
       }
 
-      // Initialize leaks on the framing pipe network
+      // Initialize leaks
       leaks = [];
       const shuffleJoints = [...joints].sort(() => Math.random() - 0.5);
       const numLeaks = Math.min(4, shuffleJoints.length);
@@ -152,6 +182,27 @@ export function InteractivePipes() {
           });
         }
       }
+
+      // Initialize 4 Cockroaches on random pipe segments
+      roaches = [];
+      if (segments.length > 0) {
+        for (let i = 0; i < 4; i++) {
+          const segIdx = Math.floor(Math.random() * segments.length);
+          roaches.push({
+            segIndex: segIdx,
+            t: Math.random(),
+            dir: Math.random() > 0.5 ? 1 : -1,
+            speed: 0.003 + Math.random() * 0.003,
+            legPhase: Math.random() * 10,
+            size: 9 + Math.random() * 3,
+          });
+        }
+      }
+
+      // Initialize Rat position
+      if (joints.length > 0) {
+        rat.jointIndex = Math.floor(Math.random() * joints.length);
+      }
     };
 
     initGrid();
@@ -169,7 +220,7 @@ export function InteractivePipes() {
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
 
-    // Stilson Wrench Cursor Drawer
+    // Wrench Drawer
     const drawHDWrench = (x: number, y: number, rot: number) => {
       ctx.save();
       ctx.translate(x + 16, y - 16);
@@ -188,7 +239,146 @@ export function InteractivePipes() {
       ctx.restore();
     };
 
-    // Render loop
+    // Draw Detailed Cockroach
+    const drawRoach = (x: number, y: number, angle: number, legPhase: number, size: number) => {
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(angle);
+
+      // Shadow on pipe
+      ctx.fillStyle = "rgba(0, 0, 0, 0.4)";
+      ctx.beginPath();
+      ctx.ellipse(0, 3, size * 0.9, size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 6 Wiggling Legs
+      ctx.strokeStyle = "#451a03";
+      ctx.lineWidth = 1.2;
+      for (let side of [-1, 1]) {
+        for (let i = 0; i < 3; i++) {
+          const legOffset = (i - 1) * 3;
+          const wiggle = Math.sin(legPhase + i * 1.5) * 3.5 * side;
+          ctx.beginPath();
+          ctx.moveTo(legOffset, 0);
+          ctx.lineTo(legOffset + (i - 1) * 2, side * (6 + wiggle));
+          ctx.stroke();
+        }
+      }
+
+      // Main Amber Mahogany Shell
+      ctx.beginPath();
+      ctx.ellipse(0, 0, size * 0.8, size * 0.45, 0, 0, Math.PI * 2);
+      ctx.fillStyle = "#78350f";
+      ctx.fill();
+
+      // Specular Highlight
+      ctx.beginPath();
+      ctx.ellipse(-2, -1.5, size * 0.4, size * 0.18, -0.2, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(251, 191, 36, 0.45)";
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = "#451a03";
+      ctx.beginPath();
+      ctx.arc(size * 0.75, 0, size * 0.25, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2 Waving Antennae
+      ctx.strokeStyle = "#92400e";
+      ctx.lineWidth = 0.9;
+      const antWiggle = Math.sin(legPhase * 0.8) * 3;
+      ctx.beginPath();
+      ctx.moveTo(size * 0.85, -1);
+      ctx.quadraticCurveTo(size * 1.4, -4 + antWiggle, size * 1.8, -7 + antWiggle);
+      ctx.moveTo(size * 0.85, 1);
+      ctx.quadraticCurveTo(size * 1.4, 4 - antWiggle, size * 1.8, 7 - antWiggle);
+      ctx.stroke();
+
+      ctx.restore();
+    };
+
+    // Draw Detailed Little City Rat
+    const drawRat = (x: number, y: number, peekProgress: number, lookOffset: number, whiskerPhase: number) => {
+      if (peekProgress <= 0.05) return;
+
+      const peekY = y - peekProgress * 22;
+
+      ctx.save();
+      ctx.translate(x, peekY);
+
+      // Ears
+      ctx.fillStyle = "#52525b";
+      ctx.beginPath();
+      ctx.arc(-8, -10, 6.5, 0, Math.PI * 2);
+      ctx.arc(8, -10, 6.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner Pink Ears
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.arc(-8, -10, 3.8, 0, Math.PI * 2);
+      ctx.arc(8, -10, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Furry Head
+      ctx.fillStyle = "#3f3f46";
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Snout
+      ctx.fillStyle = "#71717a";
+      ctx.beginPath();
+      ctx.ellipse(lookOffset * 2, 4, 7, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Shiny Eyes
+      const eyeXOffset = lookOffset * 2.5;
+      ctx.fillStyle = "#09090b";
+      ctx.beginPath();
+      ctx.arc(-4.5 + eyeXOffset, -2, 2.4, 0, Math.PI * 2);
+      ctx.arc(4.5 + eyeXOffset, -2, 2.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye Reflection
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(-5 + eyeXOffset, -2.8, 0.8, 0, Math.PI * 2);
+      ctx.arc(4 + eyeXOffset, -2.8, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nose
+      ctx.fillStyle = "#fb7185";
+      ctx.beginPath();
+      ctx.arc(lookOffset * 3, 6, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Whiskers
+      ctx.strokeStyle = "#e4e4e7";
+      ctx.lineWidth = 0.8;
+      const wWiggle = Math.sin(whiskerPhase * 8) * 1.5;
+      ctx.beginPath();
+      ctx.moveTo(lookOffset * 3 - 2, 6);
+      ctx.lineTo(-14, 4 + wWiggle);
+      ctx.moveTo(lookOffset * 3 - 2, 7);
+      ctx.lineTo(-14, 8 - wWiggle);
+      ctx.moveTo(lookOffset * 3 + 2, 6);
+      ctx.lineTo(14, 4 - wWiggle);
+      ctx.moveTo(lookOffset * 3 + 2, 7);
+      ctx.lineTo(14, 8 + wWiggle);
+      ctx.stroke();
+
+      // Paws on Flange
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.arc(-7, 12, 2.5, 0, Math.PI * 2);
+      ctx.arc(7, 12, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Main Render Loop
     const render = () => {
       if (document.hidden) {
         animationFrameId = requestAnimationFrame(render);
@@ -202,7 +392,7 @@ export function InteractivePipes() {
       ctx.clearRect(0, 0, width, height);
       isHoveringLeak = false;
 
-      // 1. Draw 3D Gunmetal Metallic Pipe Lines (Outer Body + Core Specular Highlight)
+      // 1. Draw 3D Metallic Pipes
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i]!;
         const midX = (seg.x1 + seg.x2) / 2;
@@ -210,7 +400,6 @@ export function InteractivePipes() {
         const distToMouse = Math.hypot(mouseX - midX, mouseY - midY);
         const mouseGlow = distToMouse < 240 ? 1 - distToMouse / 240 : 0;
 
-        // Pipe Outer Dark Slate Body
         ctx.beginPath();
         ctx.moveTo(seg.x1, seg.y1);
         ctx.lineTo(seg.x2, seg.y2);
@@ -219,7 +408,6 @@ export function InteractivePipes() {
         ctx.lineCap = "round";
         ctx.stroke();
 
-        // Core Specular Metallic Line
         ctx.beginPath();
         ctx.moveTo(seg.x1, seg.y1);
         ctx.lineTo(seg.x2, seg.y2);
@@ -229,11 +417,49 @@ export function InteractivePipes() {
         ctx.stroke();
       }
 
-      // 2. Draw Flange Joints & Pressure Gauges
+      // 2. Draw Cockroaches scurrying on pipes
+      for (let i = 0; i < roaches.length; i++) {
+        const r = roaches[i]!;
+        const seg = segments[r.segIndex];
+        if (!seg) continue;
+
+        // Move along pipe
+        const distToMouse = Math.hypot(
+          mouseX - (seg.x1 + (seg.x2 - seg.x1) * r.t),
+          mouseY - (seg.y1 + (seg.y2 - seg.y1) * r.t)
+        );
+
+        // Scurry faster if mouse is near
+        const currentSpeed = distToMouse < 90 ? r.speed * 2.8 : r.speed;
+        r.t += currentSpeed * r.dir;
+        r.legPhase += currentSpeed * 40;
+
+        // Switch segment at end
+        if (r.t >= 1 || r.t <= 0) {
+          r.dir *= -1;
+          r.t = Math.max(0, Math.min(1, r.t));
+          if (Math.random() > 0.3 && segments.length > 0) {
+            r.segIndex = Math.floor(Math.random() * segments.length);
+          }
+        }
+
+        const roachX = seg.x1 + (seg.x2 - seg.x1) * r.t;
+        const roachY = seg.y1 + (seg.y2 - seg.y1) * r.t;
+        const walkAngle = seg.angle + (r.dir === -1 ? Math.PI : 0);
+
+        drawRoach(roachX, roachY, walkAngle, r.legPhase, r.size);
+      }
+
+      // 3. Draw Flange Joints & Gauges
       for (let i = 0; i < joints.length; i++) {
         const j = joints[i]!;
         const distToMouse = Math.hypot(mouseX - j.x, mouseY - j.y);
         const mouseGlow = distToMouse < 240 ? 1 - distToMouse / 240 : 0;
+
+        // Draw Little Rat peeking behind this joint
+        if (rat.jointIndex === i && rat.peekProgress > 0.05) {
+          drawRat(j.x, j.y, rat.peekProgress, rat.lookOffset, rat.whiskerPhase);
+        }
 
         // Flange Ring
         ctx.beginPath();
@@ -246,7 +472,7 @@ export function InteractivePipes() {
         ctx.fillStyle = "#18181b";
         ctx.fill();
 
-        // 4 Hex Bolts
+        // Hex Bolts
         for (let b = 0; b < 4; b++) {
           const bAngle = (b * Math.PI) / 2;
           const bx = j.x + Math.cos(bAngle) * 6.5;
@@ -257,7 +483,7 @@ export function InteractivePipes() {
           ctx.fill();
         }
 
-        // Pressure Gauge
+        // Gauges
         if (j.hasGauge) {
           ctx.beginPath();
           ctx.arc(j.x, j.y - 16, 9, 0, Math.PI * 2);
@@ -267,14 +493,12 @@ export function InteractivePipes() {
           ctx.fill();
           ctx.stroke();
 
-          // Red Gauge Arc
           ctx.beginPath();
           ctx.arc(j.x, j.y - 16, 6, -Math.PI * 0.2, Math.PI * 0.35);
           ctx.strokeStyle = "#ef4444";
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          // Gauge Needle
           const needleAngle = -Math.PI * 0.75 + j.pressureVal * (Math.PI * 1.5);
           ctx.beginPath();
           ctx.moveTo(j.x, j.y - 16);
@@ -288,7 +512,50 @@ export function InteractivePipes() {
         }
       }
 
-      // 3. Draw Leaks & Water Spray Particles
+      // Update Rat State Machine
+      if (joints.length > 0) {
+        const activeJoint = joints[rat.jointIndex];
+        if (activeJoint) {
+          const distToMouse = Math.hypot(mouseX - activeJoint.x, mouseY - activeJoint.y);
+
+          rat.whiskerPhase += 0.1;
+          rat.lookOffset = Math.sin(Date.now() * 0.002) * 0.8;
+
+          // Mouse scares rat back into pipe
+          if (distToMouse < 100 && rat.state !== "hidden") {
+            rat.state = "ducking";
+          }
+
+          if (rat.state === "hidden") {
+            rat.timer--;
+            if (rat.timer <= 0) {
+              rat.jointIndex = Math.floor(Math.random() * joints.length);
+              rat.state = "peeking";
+            }
+          } else if (rat.state === "peeking") {
+            rat.peekProgress += 0.05;
+            if (rat.peekProgress >= 1) {
+              rat.peekProgress = 1;
+              rat.state = "watching";
+              rat.timer = 160;
+            }
+          } else if (rat.state === "watching") {
+            rat.timer--;
+            if (rat.timer <= 0) {
+              rat.state = "ducking";
+            }
+          } else if (rat.state === "ducking") {
+            rat.peekProgress -= 0.08;
+            if (rat.peekProgress <= 0) {
+              rat.peekProgress = 0;
+              rat.state = "hidden";
+              rat.timer = 200 + Math.floor(Math.random() * 250);
+            }
+          }
+        }
+      }
+
+      // 4. Draw Leaks & Water Spray Particles
       for (let i = 0; i < leaks.length; i++) {
         const leak = leaks[i]!;
         const distToMouse = Math.hypot(mouseX - leak.x, mouseY - leak.y);
@@ -337,7 +604,6 @@ export function InteractivePipes() {
             });
           }
 
-          // Red Warning Flare
           ctx.beginPath();
           ctx.arc(leak.x, leak.y, 14, 0, Math.PI * 2);
           ctx.fillStyle = "rgba(239, 68, 68, 0.28)";
@@ -358,7 +624,6 @@ export function InteractivePipes() {
           }
         }
 
-        // Draw Water Droplets
         for (let pIdx = leak.particles.length - 1; pIdx >= 0; pIdx--) {
           const p = leak.particles[pIdx]!;
           p.x += p.vx;
