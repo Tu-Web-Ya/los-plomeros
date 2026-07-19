@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se suavizó y ralentizó el salto de la ratita en `InteractivePipes.tsx`, acotándolo a un pequeño brinco sutil entre uniones adyacentes de la misma tubería (distancia < 220px) con una velocidad pausada y natural de ~2 segundos.
+- Se rediseñó el efecto del agua en `WaterSplashLoader.tsx` reemplazando la pintura azul opaca por agua cristalina 100% transparente y realista: gotas translúcidas deformadas por velocidad con reflejos especulares blancos, burbujas subacuáticas flotantes y degradado translúcido de líquido real.
+
 
 
 
