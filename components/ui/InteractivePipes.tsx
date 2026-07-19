@@ -27,7 +27,6 @@ export function InteractivePipes() {
       x2: number;
       y2: number;
       thickness: number;
-      isHoriz: boolean;
     }
 
     interface Leak {
@@ -48,10 +47,6 @@ export function InteractivePipes() {
     let wrenchAngle = 0;
     let isHoveringLeak = false;
 
-    // Cached gradients for ultra-fast rendering
-    let hPipeGrad: CanvasGradient | null = null;
-    let vPipeGrad: CanvasGradient | null = null;
-
     const initGrid = () => {
       const parent = canvas.parentElement;
       width = parent?.clientWidth || window.innerWidth;
@@ -64,26 +59,11 @@ export function InteractivePipes() {
       canvas.style.height = `${height}px`;
       ctx.scale(dpr, dpr);
 
-      // Pre-create pipe gradients per resize
-      hPipeGrad = ctx.createLinearGradient(0, 0, 0, 8);
-      hPipeGrad.addColorStop(0, "#09090b");
-      hPipeGrad.addColorStop(0.3, "#27272a");
-      hPipeGrad.addColorStop(0.52, "#71717a");
-      hPipeGrad.addColorStop(0.78, "#3f3f46");
-      hPipeGrad.addColorStop(1, "#09090b");
-
-      vPipeGrad = ctx.createLinearGradient(0, 0, 8, 0);
-      vPipeGrad.addColorStop(0, "#09090b");
-      vPipeGrad.addColorStop(0.3, "#27272a");
-      vPipeGrad.addColorStop(0.52, "#71717a");
-      vPipeGrad.addColorStop(0.78, "#3f3f46");
-      vPipeGrad.addColorStop(1, "#09090b");
-
       segments = [];
       joints = [];
 
-      const cols = Math.floor(width / 120) + 1;
-      const rows = Math.floor(height / 120) + 1;
+      const cols = Math.floor(width / 130) + 1;
+      const rows = Math.floor(height / 130) + 1;
       const spacingX = width / Math.max(1, cols);
       const spacingY = height / Math.max(1, rows);
 
@@ -108,7 +88,7 @@ export function InteractivePipes() {
 
           if (isInCenterZone(x, y)) continue;
 
-          const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.4;
+          const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.35;
           joints.push({ x, y, hasGauge, pressureVal: 0.4 + Math.random() * 0.5 });
 
           if (c < cols && Math.random() > 0.2) {
@@ -119,8 +99,7 @@ export function InteractivePipes() {
                 y1: y,
                 x2: nextX,
                 y2: y,
-                thickness: 8,
-                isHoriz: true,
+                thickness: 10,
               });
             }
           }
@@ -133,15 +112,14 @@ export function InteractivePipes() {
                 y1: y,
                 x2: x,
                 y2: nextY,
-                thickness: 8,
-                isHoriz: false,
+                thickness: 10,
               });
             }
           }
         }
       }
 
-      // Initialize leaks
+      // Initialize leaks on the framing pipe network
       leaks = [];
       const shuffleJoints = [...joints].sort(() => Math.random() - 0.5);
       const numLeaks = Math.min(4, shuffleJoints.length);
@@ -178,7 +156,7 @@ export function InteractivePipes() {
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
 
-    // Fast Wrench Drawer
+    // Stilson Wrench Drawer
     const drawHDWrench = (x: number, y: number, rot: number) => {
       ctx.save();
       ctx.translate(x + 16, y - 16);
@@ -197,7 +175,7 @@ export function InteractivePipes() {
       ctx.restore();
     };
 
-    // Render loop with high FPS optimizations
+    // Render loop
     const render = () => {
       if (document.hidden) {
         animationFrameId = requestAnimationFrame(render);
@@ -211,7 +189,7 @@ export function InteractivePipes() {
       ctx.clearRect(0, 0, width, height);
       isHoveringLeak = false;
 
-      // 1. Draw Pipes using cached gradients
+      // 1. Draw 3D Gunmetal Metallic Pipe Lines (Outer Body + Core Specular Highlight)
       for (let i = 0; i < segments.length; i++) {
         const seg = segments[i]!;
         const midX = (seg.x1 + seg.x2) / 2;
@@ -219,39 +197,85 @@ export function InteractivePipes() {
         const distToMouse = Math.hypot(mouseX - midX, mouseY - midY);
         const mouseGlow = distToMouse < 240 ? 1 - distToMouse / 240 : 0;
 
+        // Pipe Outer Dark Slate Body
         ctx.beginPath();
         ctx.moveTo(seg.x1, seg.y1);
         ctx.lineTo(seg.x2, seg.y2);
         ctx.lineWidth = seg.thickness;
-        ctx.strokeStyle = (seg.isHoriz ? hPipeGrad : vPipeGrad) || "#27272a";
+        ctx.strokeStyle = mouseGlow > 0.1 ? "#3f3f46" : "#27272a";
+        ctx.lineCap = "round";
         ctx.stroke();
 
-        if (mouseGlow > 0.05) {
-          ctx.fillStyle = `rgba(239, 68, 68, ${mouseGlow * 0.25})`;
-          ctx.fill();
-        }
+        // Core Specular Metallic Line
+        ctx.beginPath();
+        ctx.moveTo(seg.x1, seg.y1);
+        ctx.lineTo(seg.x2, seg.y2);
+        ctx.lineWidth = seg.thickness * 0.28;
+        ctx.strokeStyle = mouseGlow > 0.1 ? "#ef4444" : "#71717a";
+        ctx.lineCap = "round";
+        ctx.stroke();
       }
 
-      // 2. Draw Joints
+      // 2. Draw Flange Joints & Pressure Gauges
       for (let i = 0; i < joints.length; i++) {
         const j = joints[i]!;
+        const distToMouse = Math.hypot(mouseX - j.x, mouseY - j.y);
+        const mouseGlow = distToMouse < 240 ? 1 - distToMouse / 240 : 0;
+
+        // Flange Ring
         ctx.beginPath();
-        ctx.arc(j.x, j.y, 7, 0, Math.PI * 2);
-        ctx.fillStyle = "#27272a";
+        ctx.arc(j.x, j.y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = mouseGlow > 0.15 ? "#ef4444" : "#3f3f46";
         ctx.fill();
 
+        ctx.beginPath();
+        ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = "#18181b";
+        ctx.fill();
+
+        // 4 Hex Bolts
+        for (let b = 0; b < 4; b++) {
+          const bAngle = (b * Math.PI) / 2;
+          const bx = j.x + Math.cos(bAngle) * 7.5;
+          const by = j.y + Math.sin(bAngle) * 7.5;
+          ctx.beginPath();
+          ctx.arc(bx, by, 1.8, 0, Math.PI * 2);
+          ctx.fillStyle = "#a1a1aa";
+          ctx.fill();
+        }
+
+        // Pressure Gauge
         if (j.hasGauge) {
           ctx.beginPath();
-          ctx.arc(j.x, j.y - 14, 8, 0, Math.PI * 2);
+          ctx.arc(j.x, j.y - 18, 10, 0, Math.PI * 2);
           ctx.fillStyle = "#09090b";
           ctx.strokeStyle = "#52525b";
           ctx.lineWidth = 1.5;
           ctx.fill();
           ctx.stroke();
+
+          // Red Gauge Arc
+          ctx.beginPath();
+          ctx.arc(j.x, j.y - 18, 7, -Math.PI * 0.2, Math.PI * 0.35);
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Gauge Needle
+          const needleAngle = -Math.PI * 0.75 + j.pressureVal * (Math.PI * 1.5);
+          ctx.beginPath();
+          ctx.moveTo(j.x, j.y - 18);
+          ctx.lineTo(
+            j.x + Math.cos(needleAngle) * 6,
+            j.y - 18 + Math.sin(needleAngle) * 6
+          );
+          ctx.strokeStyle = "#ef4444";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
         }
       }
 
-      // 3. Draw Leaks & Water Particles
+      // 3. Draw Leaks & Water Spray Particles
       for (let i = 0; i < leaks.length; i++) {
         const leak = leaks[i]!;
         const distToMouse = Math.hypot(mouseX - leak.x, mouseY - leak.y);
@@ -300,10 +324,10 @@ export function InteractivePipes() {
             });
           }
 
-          // Warning Ring
+          // Red Warning Flare
           ctx.beginPath();
-          ctx.arc(leak.x, leak.y, 12, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+          ctx.arc(leak.x, leak.y, 14, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(239, 68, 68, 0.28)";
           ctx.fill();
 
           if (leak.fixProgress > 0) {
@@ -311,7 +335,7 @@ export function InteractivePipes() {
             ctx.arc(
               leak.x,
               leak.y,
-              18,
+              20,
               -Math.PI / 2,
               -Math.PI / 2 + Math.PI * 2 * leak.fixProgress
             );
@@ -341,7 +365,7 @@ export function InteractivePipes() {
 
         if (leak.fixed) {
           ctx.beginPath();
-          ctx.arc(leak.x, leak.y, 7, 0, Math.PI * 2);
+          ctx.arc(leak.x, leak.y, 8, 0, Math.PI * 2);
           ctx.fillStyle = "#22c55e";
           ctx.fill();
 
@@ -369,9 +393,13 @@ export function InteractivePipes() {
       animationFrameId = requestAnimationFrame(render);
     };
 
-    render();
+    // Defer start slightly so initial splash loader tap animation gets 100% thread focus
+    const timer = setTimeout(() => {
+      render();
+    }, 400);
 
     return () => {
+      clearTimeout(timer);
       window.removeEventListener("resize", handleResize);
       window.removeEventListener("mousemove", handleMouseMove);
       cancelAnimationFrame(animationFrameId);

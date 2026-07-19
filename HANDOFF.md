@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se optimizó el rendimiento general del inicio (60 FPS fluidos): pre-compilación y almacenamiento en caché de gradientes en `InteractivePipes.tsx`, límite de DPR a 1.5x, pausa de renderizado en pestañas inactivas y optimización de partículas en `WaterSplashLoader.tsx` para eliminar cualquier tirones/lag inicial en la manija del grifo.
+- Se corrigió el trazado de líneas de tuberías 3D en el Canvas (garantizando visibilidad completa en los márgenes exteriores) y se difirió el inicio del bucle de animación para liberar el 100% de los recursos de CPU/GPU durante la animación inicial del grifo.
+
 
 
 
