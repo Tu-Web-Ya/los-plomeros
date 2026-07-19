@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se diseñó e implementó el componente interactivo de lienzo 2D `InteractivePipes.tsx` que dibuja una red dinámica de tuberías con pulsos de presión de agua que reaccionan activamente al movimiento del cursor del usuario.
+- Se diseñó e implementó la mecánica interactiva en `InteractivePipes.tsx`: fugas de agua periódicas con chorros de gotas animadas y la herramienta "Llave de Tubo" (pipe wrench) que aparece automáticamente al hacer hover sobre una fuga para apretar la unión y repararla con feedback visual ("¡FUGA REPARADA! 🔧").
+
 
 
 
