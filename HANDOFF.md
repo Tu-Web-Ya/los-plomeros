@@ -28,5 +28,7 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
+- Se reemplazó el fondo por un diseño abstracto oscuro de alta definición con reflejos sutiles de luz ambiental y viñetado radial para maximizar el contraste y legibilidad de las letras del Hero.
+
 
 

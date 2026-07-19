@@ -31,14 +31,15 @@ function Hero() {
 
   return (
     <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden py-24 md:py-32">
-      {/* Imagen de fondo texturizada con overlay oscuro */}
+      {/* Imagen de fondo texturizada con overlay oscuro y viñetado para máxima legibilidad */}
       <div 
-        className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-1000"
+        className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-1000 opacity-50 filter brightness-75 contrast-125"
         style={{ 
           backgroundImage: "url('/hero-bg.jpg')",
         }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/90 via-zinc-950/80 to-zinc-950 z-10" />
+      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/60 to-zinc-950 z-10" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(9,9,11,0.9)_100%)] z-10 pointer-events-none" />
 
 
 
