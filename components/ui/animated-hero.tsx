@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { MoveRight, PhoneCall, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InteractivePipes } from "./InteractivePipes";
 
 function Hero() {
   const [titleNumber, setTitleNumber] = useState(0);
@@ -30,16 +31,13 @@ function Hero() {
   }, [titleNumber, titles]);
 
   return (
-    <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden py-24 md:py-32">
-      {/* Imagen de fondo texturizada con overlay oscuro y viñetado para máxima legibilidad */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center z-0 transition-transform duration-1000 opacity-50 filter brightness-75 contrast-125"
-        style={{ 
-          backgroundImage: "url('/hero-bg.jpg')",
-        }}
-      />
-      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/60 to-zinc-950 z-10" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_30%,rgba(9,9,11,0.9)_100%)] z-10 pointer-events-none" />
+    <div className="relative w-full min-h-screen flex items-center justify-center overflow-hidden py-24 md:py-32 bg-zinc-950">
+      {/* Fondo Interactivo de Tuberías con pulsos de presión y luz reactiva */}
+      <InteractivePipes />
+      
+      {/* Degradado y Viñetado suave para legibilidad perfecta de las letras */}
+      <div className="absolute inset-0 bg-gradient-to-b from-zinc-950/80 via-zinc-950/40 to-zinc-950 z-10 pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_20%,rgba(9,9,11,0.85)_100%)] z-10 pointer-events-none" />
 
 
 
