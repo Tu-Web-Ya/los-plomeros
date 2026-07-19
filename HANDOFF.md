@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se rediseñó `InteractivePipes.tsx` con gráficos hiperrealistas: tuberías 3D de cobre, acero y bronce con iluminación cilíndrica, bridas con pernos hexagonales, manómetros de presión industriales (PSI), chorros de agua a alta presión con física de gravedad y la herramienta Stilson heavy-duty 3D para la mecánica de reparación en vivo.
+- Se rediseñó `InteractivePipes.tsx` limitando la generación de tuberías a los bordes y márgenes exteriores para dejar la zona central 100% limpia y legible para el texto del Hero. Se adoptó una paleta sobria de acero Gunmetal mate (`#18181b` - `#3f3f46`) con reflejos metálicos sutiles y acentos rojos de emergencia.
+
 
 
 
