@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se rediseñó el efecto del agua en `WaterSplashLoader.tsx` reemplazando la pintura azul opaca por agua cristalina 100% transparente y realista: gotas translúcidas deformadas por velocidad con reflejos especulares blancos, burbujas subacuáticas flotantes y degradado translúcido de líquido real.
+- Se equilibraron los márgenes superior e inferior de la animación de texto rotativo en `animated-hero.tsx`, centrándola verticalmente de forma simétrica entre el título "PLOMERÍA" y el subtítulo "DE CONFIANZA".
+
 
 
 
