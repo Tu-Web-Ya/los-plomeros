@@ -27,4 +27,6 @@
 - Se configuraron los scripts estándar (`dev`, `build`, `preview`) en `package.json` y se creó el archivo `.gitignore`.
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
+- Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
+
 
