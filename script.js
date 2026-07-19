@@ -4,14 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
         gsap.registerPlugin(ScrollTrigger);
     }
 
-    const navButtons = document.querySelectorAll('[data-target]');
-    const views = document.querySelectorAll('.view');
-    const splashOverlay = document.getElementById('water-splash');
+    const navButtons = document.querySelectorAll('.nav-btn');
     
-    // Configuración de la transición
-    const TRANSITION_DURATION = 600; // ms, coincide con styles.css
-    let isAnimating = false;
-
     function splitTextIntoChars(selector) {
         const element = document.querySelector(selector);
         if (!element) return;
@@ -27,81 +21,53 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Animación de entrada inicial del Hero
     runInitialAnimations();
+    // Configurar los efectos y ScrollTrigger en el resto del sitio
+    setupScrollTriggerAnimations();
 
+    // Navegación con scroll suave
     navButtons.forEach(btn => {
         btn.addEventListener('click', (e) => {
             const targetId = btn.getAttribute('data-target');
-            if (!targetId || isAnimating) return;
+            const targetSection = document.getElementById(targetId);
             
-            // Si ya estamos en la vista, no hacemos nada
-            const currentActiveView = document.querySelector('.active-view');
-            if (currentActiveView && currentActiveView.id === targetId) return;
-
-            e.preventDefault();
-            navigateTo(targetId);
+            if (targetSection) {
+                e.preventDefault();
+                targetSection.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
         });
     });
 
-    function navigateTo(targetId) {
-        if (typeof gsap === 'undefined') return;
-        isAnimating = true;
+    // Actualizar menú activo según la sección actual mediante umbrales de scroll robustos
+    window.addEventListener('scroll', () => {
+        let currentSection = 'home';
+        const scrollY = window.scrollY;
 
-        const currentActiveView = document.querySelector('.active-view');
-        const targetView = document.getElementById(targetId);
+        const servicesSection = document.getElementById('services');
+        const contactSection = document.getElementById('contact');
 
-        if (!targetView || !currentActiveView) {
-            isAnimating = false;
-            return;
+        // Definimos los puntos de activación (offset de 250px para mejor respuesta visual)
+        const servicesThreshold = servicesSection ? servicesSection.offsetTop - 250 : 0;
+        const contactThreshold = contactSection ? contactSection.offsetTop - 250 : 0;
+
+        if (scrollY >= contactThreshold) {
+            currentSection = 'contact';
+        } else if (scrollY >= servicesThreshold) {
+            currentSection = 'services';
+        } else {
+            currentSection = 'home';
         }
 
-        const tl = gsap.timeline({
-            onComplete: () => {
-                isAnimating = false;
+        navButtons.forEach(btn => {
+            if (btn.getAttribute('data-target') === currentSection) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
             }
         });
-
-        // 1. Desvanecer y deslizar hacia arriba la página actual
-        tl.to(currentActiveView, {
-            opacity: 0,
-            y: -20,
-            duration: 0.35,
-            ease: 'power2.inOut',
-            onComplete: () => {
-                // Ocultar la vista anterior
-                views.forEach(view => view.classList.remove('active-view'));
-                
-                // Configurar la nueva vista para entrar desde abajo
-                gsap.set(targetView, {
-                    opacity: 0,
-                    y: 20
-                });
-                
-                // Activar la nueva vista
-                targetView.classList.add('active-view');
-                window.scrollTo(0, 0); // Reset scroll
-
-                // Actualizar botones de navegación
-                document.querySelectorAll('.nav-btn').forEach(btn => {
-                    if (btn.getAttribute('data-target') === targetId) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
-            }
-        })
-        // 2. Entrar la nueva página suavemente deslizando a su posición original
-        .to(targetView, {
-            opacity: 1,
-            y: 0,
-            duration: 0.5,
-            ease: 'power3.out',
-            onStart: () => {
-                // Disparar las animaciones de los elementos internos de la nueva página
-                runPageAnimations(targetId);
-            }
-        });
-    }
+    });
 
     function runInitialAnimations() {
         if (typeof gsap === 'undefined') return;
@@ -134,12 +100,12 @@ document.addEventListener('DOMContentLoaded', () => {
             delay: 0.5
         });
 
-        // Animación ultra-fluida de espaciado de letras para "PROFESIONAL" usando GPU-transforms (cero reflow/lag)
+        // Animación ultra-fluida de espaciado de letras para "PROFESIONAL" usando GPU-transforms
         const chars = document.querySelectorAll('.hero-title .outline-text .char');
         if (chars.length > 0) {
             const centerIndex = (chars.length - 1) / 2;
             chars.forEach((char, index) => {
-                const offset = (index - centerIndex) * 20; // desplazamiento de dispersión horizontal
+                const offset = (index - centerIndex) * 20;
                 gsap.fromTo(char, 
                     { x: offset, opacity: 0 },
                     { x: 0, opacity: 1, duration: 2.2, ease: 'expo.out', delay: 0.65 }
@@ -147,12 +113,12 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
-        // Parallax interactivo del fondo con el mouse en pantallas de escritorio
+        // Parallax interactivo del fondo con el mouse
         const hero = document.querySelector('.hero');
         if (hero) {
             hero.addEventListener('mousemove', (e) => {
                 const { clientX, clientY } = e;
-                const xPos = (clientX / window.innerWidth - 0.5) * 30; // max 30px
+                const xPos = (clientX / window.innerWidth - 0.5) * 30;
                 const yPos = (clientY / window.innerHeight - 0.5) * 30;
                 
                 gsap.to('.hero', {
@@ -164,62 +130,114 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function runPageAnimations(targetId) {
-        if (typeof gsap === 'undefined') return;
+    function setupScrollTriggerAnimations() {
+        if (typeof gsap === 'undefined' || typeof ScrollTrigger === 'undefined') return;
 
-        // Resetear y animar elementos según la sección
-        if (targetId === 'home') {
-            gsap.fromTo('.glass-panel', 
-                { scale: 0.95, y: 30, opacity: 0 }, 
-                { scale: 1, y: 0, opacity: 1, duration: 1, ease: 'power3.out' }
-            );
+        // 1. Entrada de la cuadrícula de servicios
+        gsap.from('#services .services-header', {
+            scrollTrigger: {
+                trigger: '#services',
+                start: 'top 80%',
+            },
+            y: 30,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
 
-            // Re-animar cascada de líneas del título al volver a Inicio
-            gsap.fromTo('.hero-line',
-                { y: 20, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.8, stagger: 0.1, ease: 'power3.out', delay: 0.2 }
-            );
+        gsap.from('.service-card', {
+            scrollTrigger: {
+                trigger: '.services-grid',
+                start: 'top 85%',
+            },
+            y: 40,
+            opacity: 0,
+            duration: 1,
+            stagger: 0.15,
+            ease: 'power4.out'
+        });
 
-            // Re-animar espaciado de letras de "PROFESIONAL" usando GPU-transforms (cero reflow/lag)
-            const chars = document.querySelectorAll('.hero-title .outline-text .char');
-            if (chars.length > 0) {
-                const centerIndex = (chars.length - 1) / 2;
-                chars.forEach((char, index) => {
-                    const offset = (index - centerIndex) * 20; // desplazamiento de dispersión horizontal
-                    gsap.fromTo(char, 
-                        { x: offset, opacity: 0 },
-                        { x: 0, opacity: 1, duration: 1.8, ease: 'expo.out', delay: 0.3 }
-                    );
-                });
-            }
-        }
-        else if (targetId === 'services') {
-            // Cabecera de servicios
-            gsap.fromTo('#services .section-tag, #services .section-title, #services .section-desc',
-                { y: 30, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: 'power3.out' }
-            );
-            // Lista interactiva de servicios (entrada en cascada lateral)
-            gsap.fromTo('.service-list-item',
-                { x: -60, opacity: 0 },
-                { x: 0, opacity: 1, duration: 1, stagger: 0.12, ease: 'power4.out', delay: 0.3 }
-            );
-        }
-        else if (targetId === 'contact') {
-            // Cabecera de contacto
-            gsap.fromTo('#contact .section-tag, #contact .section-title',
-                { y: 30, opacity: 0 },
-                { y: 0, opacity: 1, duration: 0.8, stagger: 0.15, ease: 'power3.out' }
-            );
-            // Tarjeta de información (izq) y formulario (der)
-            gsap.fromTo('.contact-info',
-                { x: -50, opacity: 0 },
-                { x: 0, opacity: 1, duration: 1, ease: 'power3.out', delay: 0.2 }
-            );
-            gsap.fromTo('.contact-form-wrapper',
-                { x: 50, opacity: 0 },
-                { x: 0, opacity: 1, duration: 1, ease: 'power3.out', delay: 0.3 }
-            );
-        }
+        // 2. Destello del Banner de Emergencia al entrar en vista
+        gsap.from('.emergency-banner-content', {
+            scrollTrigger: {
+                trigger: '.emergency-banner-section',
+                start: 'top 85%'
+            },
+            scale: 0.95,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
+
+        // 3. Animación de sección Sobre Nosotros
+        gsap.from('.team-photo-wrapper', {
+            scrollTrigger: {
+                trigger: '#about',
+                start: 'top 80%'
+            },
+            x: -50,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.about-content-side', {
+            scrollTrigger: {
+                trigger: '#about',
+                start: 'top 80%'
+            },
+            x: 50,
+            opacity: 0,
+            duration: 1,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.trust-item', {
+            scrollTrigger: {
+                trigger: '.trust-list',
+                start: 'top 85%'
+            },
+            y: 20,
+            opacity: 0,
+            duration: 0.6,
+            stagger: 0.15,
+            ease: 'power2.out'
+        });
+
+        // 4. Testimonios
+        gsap.from('.testimonial-card', {
+            scrollTrigger: {
+                trigger: '.testimonials-module',
+                start: 'top 85%'
+            },
+            y: 30,
+            opacity: 0,
+            duration: 0.8,
+            stagger: 0.2,
+            ease: 'power3.out'
+        });
+
+        // 5. Formulario & Mapa
+        gsap.from('.contact-form-wrapper', {
+            scrollTrigger: {
+                trigger: '#contact',
+                start: 'top 80%'
+            },
+            x: -40,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
+
+        gsap.from('.map-wrapper', {
+            scrollTrigger: {
+                trigger: '#contact',
+                start: 'top 80%'
+            },
+            x: 40,
+            opacity: 0,
+            duration: 0.8,
+            ease: 'power3.out'
+        });
     }
 });
