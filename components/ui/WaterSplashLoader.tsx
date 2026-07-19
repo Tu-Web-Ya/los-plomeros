@@ -64,7 +64,7 @@ export function WaterSplashLoader({ onComplete }: WaterSplashLoaderProps) {
         if (stateRef.current.floodProgress < 0.95) {
           const spoutX = width / 2;
           const spoutY = height / 2 + 118; // Punto de unión del grifo central
-          const particlesPerFrame = 8; // Aumentado para un chorro mucho más denso
+          const particlesPerFrame = 4; // Optimizado para máxima fluidez a 60 FPS
 
           for (let k = 0; k < particlesPerFrame; k++) {
             // Ángulo hacia abajo con sutil dispersión
