@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from "react";
 
-interface LeakParticle {
+interface WaterParticle {
   x: number;
   y: number;
   vx: number;
@@ -10,6 +10,7 @@ interface LeakParticle {
   life: number;
   maxLife: number;
   size: number;
+  opacity: number;
 }
 
 interface Leak {
@@ -19,8 +20,9 @@ interface Leak {
   sprayAngle: number;
   fixed: boolean;
   fixProgress: number; // 0 to 1
-  particles: LeakParticle[];
-  repairTextTimer: number; // for floating "+1 Reparado"
+  particles: WaterParticle[];
+  repairTextTimer: number;
+  pressure: number; // 0 to 1
 }
 
 interface Segment {
@@ -29,6 +31,14 @@ interface Segment {
   x2: number;
   y2: number;
   thickness: number;
+  material: "copper" | "steel" | "bronze";
+}
+
+interface JointNode {
+  x: number;
+  y: number;
+  hasGauge: boolean;
+  pressureVal: number;
 }
 
 export function InteractivePipes() {
@@ -51,12 +61,223 @@ export function InteractivePipes() {
     let targetMouseY = -1000;
 
     let segments: Segment[] = [];
+    let joints: JointNode[] = [];
     let leaks: Leak[] = [];
     let nextLeakId = 1;
     let wrenchAngle = 0;
     let isHoveringLeak = false;
 
-    // Initialize pipe grid and random leak spots
+    // Helper: Draw 3D Metallic Cylindrical Pipe
+    const drawRealisticPipe = (
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      thickness: number,
+      material: "copper" | "steel" | "bronze",
+      mouseGlow: number
+    ) => {
+      const angle = Math.atan2(y2 - y1, x2 - x1);
+      const halfW = thickness * 1.3;
+      const perpX = -Math.sin(angle) * halfW;
+      const perpY = Math.cos(angle) * halfW;
+
+      ctx.save();
+
+      // Outer Drop Shadow
+      ctx.beginPath();
+      ctx.moveTo(x1 - perpX * 1.4, y1 - perpY * 1.4);
+      ctx.lineTo(x2 - perpX * 1.4, y2 - perpY * 1.4);
+      ctx.lineTo(x2 + perpX * 1.4, y2 + perpY * 1.4);
+      ctx.lineTo(x1 + perpX * 1.4, y1 + perpY * 1.4);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(2, 6, 23, 0.75)";
+      ctx.fill();
+
+      // 3D Cylindrical Metallic Gradient
+      const grad = ctx.createLinearGradient(
+        x1 - perpX,
+        y1 - perpY,
+        x1 + perpX,
+        y1 + perpY
+      );
+
+      if (material === "copper") {
+        grad.addColorStop(0, "#451a03"); // Dark shadow edge
+        grad.addColorStop(0.3, "#9a3412"); // Copper body
+        grad.addColorStop(0.55, "#fed7aa"); // Specular chrome/copper highlight
+        grad.addColorStop(0.8, "#ea580c"); // Midtone reflection
+        grad.addColorStop(1, "#292524"); // Dark bottom edge
+      } else if (material === "bronze") {
+        grad.addColorStop(0, "#291d09");
+        grad.addColorStop(0.3, "#b45309");
+        grad.addColorStop(0.55, "#fef3c7");
+        grad.addColorStop(0.8, "#d97706");
+        grad.addColorStop(1, "#1c1917");
+      } else {
+        // Steel / Galvanized Chrome
+        grad.addColorStop(0, "#0f172a");
+        grad.addColorStop(0.3, "#475569");
+        grad.addColorStop(0.55, "#f8fafc"); // Specular highlight
+        grad.addColorStop(0.8, "#64748b");
+        grad.addColorStop(1, "#020617");
+      }
+
+      ctx.beginPath();
+      ctx.moveTo(x1 - perpX, y1 - perpY);
+      ctx.lineTo(x2 - perpX, y2 - perpY);
+      ctx.lineTo(x2 + perpX, y2 + perpY);
+      ctx.lineTo(x1 + perpX, y1 + perpY);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Reactive Emergency Heat Glow when mouse is near
+      if (mouseGlow > 0.05) {
+        ctx.fillStyle = `rgba(239, 68, 68, ${mouseGlow * 0.3})`;
+        ctx.fill();
+      }
+
+      ctx.restore();
+    };
+
+    // Helper: Draw 3D Flange Connection Rings with Hex Bolts
+    const drawFlangeJoint = (x: number, y: number, r: number, mouseGlow: number) => {
+      ctx.save();
+
+      // Outer Metallic Flange Ring
+      const grad = ctx.createRadialGradient(x, y, 2, x, y, r + 5);
+      grad.addColorStop(0, "#f8fafc");
+      grad.addColorStop(0.5, "#475569");
+      grad.addColorStop(1, "#0f172a");
+
+      ctx.beginPath();
+      ctx.arc(x, y, r + 5, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.shadowColor = mouseGlow > 0.2 ? "rgba(239, 68, 68, 0.75)" : "rgba(0, 0, 0, 0.8)";
+      ctx.shadowBlur = mouseGlow > 0.2 ? 16 : 8;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+
+      // Pipe Fitting Core
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.55, 0, Math.PI * 2);
+      ctx.fillStyle = "#1e293b";
+      ctx.fill();
+
+      // 4 Hex Bolts around Flange
+      for (let b = 0; b < 4; b++) {
+        const bAngle = (b * Math.PI) / 2;
+        const bx = x + Math.cos(bAngle) * (r * 0.72);
+        const by = y + Math.sin(bAngle) * (r * 0.72);
+
+        ctx.beginPath();
+        ctx.arc(bx, by, 2, 0, Math.PI * 2);
+        ctx.fillStyle = "#e2e8f0";
+        ctx.fill();
+      }
+
+      ctx.restore();
+    };
+
+    // Helper: Draw Industrial Brass Pressure Gauge (Manómetro)
+    const drawPressureGauge = (x: number, y: number, r: number, pressure: number) => {
+      ctx.save();
+
+      // Brass Outer Case
+      const caseGrad = ctx.createRadialGradient(x, y, r * 0.5, x, y, r + 3);
+      caseGrad.addColorStop(0, "#fde047");
+      caseGrad.addColorStop(0.6, "#d97706");
+      caseGrad.addColorStop(1, "#78350f");
+
+      ctx.beginPath();
+      ctx.arc(x, y, r + 3, 0, Math.PI * 2);
+      ctx.fillStyle = caseGrad;
+      ctx.fill();
+      ctx.strokeStyle = "#92400e";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // White Dial Face
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.82, 0, Math.PI * 2);
+      ctx.fillStyle = "#f8fafc";
+      ctx.fill();
+
+      // Red Danger PSI Zone Arc
+      ctx.beginPath();
+      ctx.arc(x, y, r * 0.65, -Math.PI * 0.2, Math.PI * 0.35);
+      ctx.strokeStyle = "#ef4444";
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Needle (Pressure Indicator)
+      const needleAngle = -Math.PI * 0.75 + pressure * (Math.PI * 1.5);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+      ctx.lineTo(x + Math.cos(needleAngle) * (r * 0.62), y + Math.sin(needleAngle) * (r * 0.62));
+      ctx.strokeStyle = "#dc2626";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Needle Cap
+      ctx.beginPath();
+      ctx.arc(x, y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = "#0f172a";
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Helper: Draw Heavy-Duty Stilson Pipe Wrench Cursor
+    const drawHDWrench = (x: number, y: number, rot: number) => {
+      ctx.save();
+      ctx.translate(x + 18, y - 18);
+      ctx.rotate(rot);
+
+      // Wrench Shadow
+      ctx.shadowColor = "rgba(0, 0, 0, 0.85)";
+      ctx.shadowBlur = 14;
+
+      // Heavy-Duty Red Handle
+      const handleGrad = ctx.createLinearGradient(-6, 0, 6, 0);
+      handleGrad.addColorStop(0, "#7f1d1d");
+      handleGrad.addColorStop(0.4, "#ef4444");
+      handleGrad.addColorStop(1, "#991b1b");
+      ctx.fillStyle = handleGrad;
+      ctx.beginPath();
+      ctx.roundRect(-6, 6, 12, 38, 4);
+      ctx.fill();
+
+      // Brass Knurled Adjusting Nut
+      const nutGrad = ctx.createLinearGradient(-7, 0, 7, 0);
+      nutGrad.addColorStop(0, "#78350f");
+      nutGrad.addColorStop(0.5, "#fde047");
+      nutGrad.addColorStop(1, "#b45309");
+      ctx.fillStyle = nutGrad;
+      ctx.fillRect(-7, 0, 14, 6);
+
+      // Chrome Plated Steel Jaw Base
+      const steelGrad = ctx.createLinearGradient(-10, -16, 10, 0);
+      steelGrad.addColorStop(0, "#334155");
+      steelGrad.addColorStop(0.5, "#f1f5f9");
+      steelGrad.addColorStop(1, "#475569");
+      ctx.fillStyle = steelGrad;
+
+      ctx.beginPath();
+      ctx.roundRect(-9, -16, 18, 16, 3);
+      ctx.fill();
+
+      // Top Movable Hook Jaw
+      ctx.beginPath();
+      ctx.rect(-12, -26, 24, 8);
+      ctx.rect(8, -26, 4, 16);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
+    // Initialize Realistic Pipe Network & Leaks
     const initGrid = () => {
       const parent = canvas.parentElement;
       width = parent?.clientWidth || window.innerWidth;
@@ -70,41 +291,47 @@ export function InteractivePipes() {
       ctx.scale(dpr, dpr);
 
       segments = [];
-      const cols = Math.floor(width / 110) + 1;
-      const rows = Math.floor(height / 110) + 1;
+      joints = [];
+      const cols = Math.floor(width / 130) + 1;
+      const rows = Math.floor(height / 130) + 1;
       const spacingX = width / Math.max(1, cols);
       const spacingY = height / Math.max(1, rows);
 
-      const joints: { x: number; y: number }[] = [];
+      const materials: ("copper" | "steel" | "bronze")[] = ["steel", "copper", "bronze"];
 
       for (let r = 0; r <= rows; r++) {
         for (let c = 0; c <= cols; c++) {
           const x = c * spacingX;
           const y = r * spacingY;
-          joints.push({ x, y });
+          const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.4;
+          joints.push({ x, y, hasGauge, pressureVal: 0.4 + Math.random() * 0.5 });
 
-          if (c < cols && Math.random() > 0.25) {
+          // Horizontal pipe
+          if (c < cols && Math.random() > 0.2) {
             segments.push({
               x1: x,
               y1: y,
               x2: x + spacingX,
               y2: y,
-              thickness: Math.random() > 0.6 ? 6 : 4,
+              thickness: Math.random() > 0.5 ? 9 : 6,
+              material: materials[Math.floor(Math.random() * materials.length)]!,
             });
           }
-          if (r < rows && Math.random() > 0.25) {
+          // Vertical pipe
+          if (r < rows && Math.random() > 0.2) {
             segments.push({
               x1: x,
               y1: y,
               x2: x,
               y2: y + spacingY,
-              thickness: Math.random() > 0.6 ? 6 : 4,
+              thickness: Math.random() > 0.5 ? 9 : 6,
+              material: materials[Math.floor(Math.random() * materials.length)]!,
             });
           }
         }
       }
 
-      // Create initial active leaks at random pipe joints
+      // Initialize initial active leaks
       leaks = [];
       const shuffleJoints = [...joints].sort(() => Math.random() - 0.5);
       const numLeaks = Math.min(4, shuffleJoints.length);
@@ -121,6 +348,7 @@ export function InteractivePipes() {
             fixProgress: 0,
             particles: [],
             repairTextTimer: 0,
+            pressure: 0.85 + Math.random() * 0.15,
           });
         }
       }
@@ -141,48 +369,7 @@ export function InteractivePipes() {
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
 
-    // Draw Pipe Wrench Cursor over leak
-    const drawPipeWrench = (x: number, y: number, rot: number) => {
-      ctx.save();
-      ctx.translate(x + 12, y - 12);
-      ctx.rotate(rot);
-
-      // Shadow
-      ctx.shadowColor = "rgba(0, 0, 0, 0.75)";
-      ctx.shadowBlur = 12;
-
-      // Handle (Red Industrial Wrench)
-      ctx.fillStyle = "#ef4444";
-      ctx.beginPath();
-      ctx.roundRect(-5, 4, 10, 32, 3);
-      ctx.fill();
-      ctx.strokeStyle = "#991b1b";
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      // Metallic Adjusting Nut
-      ctx.fillStyle = "#f59e0b";
-      ctx.fillRect(-6, 0, 12, 5);
-
-      // Silver Steel Jaw Head
-      ctx.fillStyle = "#cbd5e1";
-      ctx.beginPath();
-      ctx.roundRect(-8, -14, 16, 14, 2);
-      ctx.fill();
-      ctx.strokeStyle = "#475569";
-      ctx.stroke();
-
-      // Top Hook Jaw
-      ctx.fillStyle = "#94a3b8";
-      ctx.beginPath();
-      ctx.rect(-10, -22, 20, 8);
-      ctx.rect(6, -22, 4, 14);
-      ctx.fill();
-
-      ctx.restore();
-    };
-
-    // Main Animation Loop
+    // Main Render Loop
     const render = () => {
       mouseX += (targetMouseX - mouseX) * 0.12;
       mouseY += (targetMouseY - mouseY) * 0.12;
@@ -191,58 +378,51 @@ export function InteractivePipes() {
       ctx.clearRect(0, 0, width, height);
       isHoveringLeak = false;
 
-      // 1. Draw Metallic Pipe Lines
+      // 1. Render Realistic 3D Pipe Network
       segments.forEach((seg) => {
         const midX = (seg.x1 + seg.x2) / 2;
         const midY = (seg.y1 + seg.y2) / 2;
         const distToMouse = Math.hypot(mouseX - midX, mouseY - midY);
-        const mouseGlow = Math.max(0, 1 - distToMouse / 220);
+        const mouseGlow = Math.max(0, 1 - distToMouse / 240);
 
-        // Pipe Shadow
-        ctx.beginPath();
-        ctx.moveTo(seg.x1, seg.y1);
-        ctx.lineTo(seg.x2, seg.y2);
-        ctx.lineWidth = seg.thickness + 4;
-        ctx.strokeStyle = `rgba(10, 10, 14, ${0.8 + mouseGlow * 0.2})`;
-        ctx.lineCap = "round";
-        ctx.stroke();
-
-        // Pipe Inner Metal Body
-        ctx.beginPath();
-        ctx.moveTo(seg.x1, seg.y1);
-        ctx.lineTo(seg.x2, seg.y2);
-        ctx.lineWidth = seg.thickness;
-        ctx.strokeStyle = mouseGlow > 0.1
-          ? `rgba(${Math.floor(60 + mouseGlow * 170)}, ${Math.floor(25 + mouseGlow * 40)}, ${Math.floor(30 + mouseGlow * 40)}, ${0.4 + mouseGlow * 0.5})`
-          : `rgba(36, 36, 42, 0.4)`;
-        ctx.stroke();
-
-        // Flange / Elbow Joints
-        [{ x: seg.x1, y: seg.y1 }, { x: seg.x2, y: seg.y2 }].forEach((pt) => {
-          ctx.beginPath();
-          ctx.arc(pt.x, pt.y, seg.thickness * 1.2, 0, Math.PI * 2);
-          ctx.fillStyle = mouseGlow > 0.2
-            ? `rgba(239, 68, 68, ${0.4 + mouseGlow * 0.5})`
-            : `rgba(26, 26, 30, 0.6)`;
-          ctx.fill();
-        });
+        drawRealisticPipe(
+          seg.x1,
+          seg.y1,
+          seg.x2,
+          seg.y2,
+          seg.thickness,
+          seg.material,
+          mouseGlow
+        );
       });
 
-      // 2. Process & Draw Leaks + Water Spray
+      // 2. Render Flange Joints and Gauges
+      joints.forEach((j) => {
+        const distToMouse = Math.hypot(mouseX - j.x, mouseY - j.y);
+        const mouseGlow = Math.max(0, 1 - distToMouse / 240);
+
+        drawFlangeJoint(j.x, j.y, 8, mouseGlow);
+
+        if (j.hasGauge) {
+          drawPressureGauge(j.x, j.y - 18, 11, j.pressureVal);
+        }
+      });
+
+      // 3. Process & Render Water Leaks and High Pressure Spray Jets
       leaks.forEach((leak) => {
         const distToMouse = Math.hypot(mouseX - leak.x, mouseY - leak.y);
 
         if (!leak.fixed) {
-          // If mouse is near leak, user is tightening/fixing it!
-          if (distToMouse < 65) {
+          // If mouse is over leak, trigger pipe wrench tightening repair
+          if (distToMouse < 70) {
             isHoveringLeak = true;
-            leak.fixProgress += 0.035; // Fixes in ~0.3 seconds
+            leak.fixProgress += 0.035;
 
             if (leak.fixProgress >= 1) {
               leak.fixed = true;
-              leak.repairTextTimer = 60; // Show "+1 Reparado" for 60 frames
+              leak.repairTextTimer = 65;
 
-              // Spawn new leak somewhere else after 3 seconds
+              // Respawn a new leak somewhere else after 3 seconds
               setTimeout(() => {
                 const newX = (Math.random() * 0.8 + 0.1) * width;
                 const newY = (Math.random() * 0.8 + 0.1) * height;
@@ -255,6 +435,7 @@ export function InteractivePipes() {
                   fixProgress: 0,
                   particles: [],
                   repairTextTimer: 0,
+                  pressure: 0.9,
                 });
               }, 3000);
             }
@@ -262,102 +443,102 @@ export function InteractivePipes() {
             leak.fixProgress = Math.max(0, leak.fixProgress - 0.01);
           }
 
-          // Emit Water Spray Particles
-          if (Math.random() > 0.2) {
-            const spread = 0.5;
+          // Emit High Pressure Water Jet Spray Particles
+          if (Math.random() > 0.15) {
+            const spread = 0.45;
             const angle = leak.sprayAngle + (Math.random() - 0.5) * spread;
-            const speed = 2.5 + Math.random() * 3.5;
+            const speed = 3.5 + Math.random() * 4.5;
             leak.particles.push({
               x: leak.x,
               y: leak.y,
               vx: Math.cos(angle) * speed,
-              vy: Math.sin(angle) * speed + 0.5, // subtle gravity
+              vy: Math.sin(angle) * speed + 0.6, // Gravity pull
               life: 0,
-              maxLife: 20 + Math.random() * 15,
-              size: 2 + Math.random() * 2.5,
+              maxLife: 22 + Math.random() * 16,
+              size: 2.5 + Math.random() * 3,
+              opacity: 0.85,
             });
           }
 
-          // Draw Warning Pulse around broken pipe joint
-          const pulseRadius = 10 + Math.sin(Date.now() * 0.008) * 4;
+          // Warning Red Flare at Leaking Joint
+          const pulseR = 12 + Math.sin(Date.now() * 0.009) * 5;
           ctx.beginPath();
-          ctx.arc(leak.x, leak.y, pulseRadius, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(239, 68, 68, 0.25)";
+          ctx.arc(leak.x, leak.y, pulseR, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(239, 68, 68, 0.3)";
           ctx.shadowColor = "#ef4444";
-          ctx.shadowBlur = 15;
+          ctx.shadowBlur = 18;
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // Draw Repairing Progress Ring
+          // Repair Progress Arc Ring
           if (leak.fixProgress > 0) {
             ctx.beginPath();
             ctx.arc(
               leak.x,
               leak.y,
-              18,
+              22,
               -Math.PI / 2,
               -Math.PI / 2 + Math.PI * 2 * leak.fixProgress
             );
             ctx.lineWidth = 4;
-            ctx.strokeStyle = "#22c55e"; // Green repair ring
+            ctx.strokeStyle = "#22c55e";
             ctx.shadowColor = "#22c55e";
-            ctx.shadowBlur = 10;
+            ctx.shadowBlur = 12;
             ctx.stroke();
             ctx.shadowBlur = 0;
           }
         }
 
-        // Render Water Spray Particles
-        leak.particles.forEach((p, idx) => {
+        // Render Water Droplet Spray & Steam Mist
+        leak.particles.forEach((p) => {
           p.x += p.vx;
           p.y += p.vy;
           p.life++;
 
-          const alpha = Math.max(0, 1 - p.life / p.maxLife);
+          const alpha = Math.max(0, p.opacity * (1 - p.life / p.maxLife));
           ctx.beginPath();
           ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = `rgba(56, 189, 248, ${alpha * 0.8})`; // Water Cyan Glow
+          ctx.fillStyle = `rgba(186, 230, 253, ${alpha})`; // Water droplet specular glow
           ctx.shadowColor = "#38bdf8";
-          ctx.shadowBlur = 4;
+          ctx.shadowBlur = 6;
           ctx.fill();
           ctx.shadowBlur = 0;
         });
         leak.particles = leak.particles.filter((p) => p.life < p.maxLife);
 
-        // Draw Fixed Joint Sparkle Glow
+        // Fixed Seal Sparkle
         if (leak.fixed) {
           ctx.beginPath();
-          ctx.arc(leak.x, leak.y, 7, 0, Math.PI * 2);
-          ctx.fillStyle = "rgba(34, 197, 94, 0.8)"; // Green repaired seal
+          ctx.arc(leak.x, leak.y, 8, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(34, 197, 94, 0.85)";
           ctx.shadowColor = "#22c55e";
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 14;
           ctx.fill();
           ctx.shadowBlur = 0;
 
           // Floating "+1 REPARADO" text
           if (leak.repairTextTimer > 0) {
             leak.repairTextTimer--;
-            const offsetY = (60 - leak.repairTextTimer) * 0.5;
+            const offsetY = (65 - leak.repairTextTimer) * 0.5;
             const textAlpha = Math.min(1, leak.repairTextTimer / 20);
 
             ctx.save();
-            ctx.font = "900 12px sans-serif";
+            ctx.font = "900 13px sans-serif";
             ctx.fillStyle = `rgba(34, 197, 94, ${textAlpha})`;
             ctx.shadowColor = "#22c55e";
-            ctx.shadowBlur = 8;
+            ctx.shadowBlur = 10;
             ctx.textAlign = "center";
-            ctx.fillText("¡FUGA REPARADA! 🔧", leak.x, leak.y - 15 - offsetY);
+            ctx.fillText("¡FUGA REPARADA! 🔧", leak.x, leak.y - 18 - offsetY);
             ctx.restore();
           }
         }
       });
 
-      // Remove fixed leaks after text timer finishes
       leaks = leaks.filter((l) => !l.fixed || l.repairTextTimer > 0);
 
-      // 3. Render Custom Pipe Wrench Cursor when hovering near a leak
+      // 4. Render Heavy Duty Pipe Wrench Cursor when hovering over leaks
       if (isHoveringLeak && mouseX > 0 && mouseY > 0) {
-        drawPipeWrench(mouseX, mouseY, Math.sin(wrenchAngle) * 0.3);
+        drawHDWrench(mouseX, mouseY, Math.sin(wrenchAngle) * 0.35);
       }
 
       animationFrameId = requestAnimationFrame(render);
