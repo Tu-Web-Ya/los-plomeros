@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se añadió una animación de salto parabólico de baja probabilidad (Easter Egg) para la ratita en `InteractivePipes.tsx`, donde ocasionalmente realiza un salto en arco en el aire entre dos tuberías con movimiento de cola y patitas encogidas antes de volver a ocultarse.
+- Se suavizó y ralentizó el salto de la ratita en `InteractivePipes.tsx`, acotándolo a un pequeño brinco sutil entre uniones adyacentes de la misma tubería (distancia < 220px) con una velocidad pausada y natural de ~2 segundos.
+
 
 
 

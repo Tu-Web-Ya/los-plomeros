@@ -595,13 +595,14 @@ export function InteractivePipes() {
         }
       }
 
-      // Draw Jumping Rat in Mid-Air Parabolic Leap (Rare Event)
+      // Draw Jumping Rat in Mid-Air Parabolic Leap (Rare Event - Gentle Realistic Hop)
       if (rat.state === "jumping" && joints[rat.jointIndex] && joints[rat.targetJointIndex]) {
         const j1 = joints[rat.jointIndex]!;
         const j2 = joints[rat.targetJointIndex]!;
         drawJumpingRat(j1.x, j1.y, j2.x, j2.y, rat.jumpProgress);
 
-        rat.jumpProgress += 0.022;
+        // Slow, graceful, realistic jump speed (~2 seconds for full arc)
+        rat.jumpProgress += 0.008;
         if (rat.jumpProgress >= 1) {
           rat.jumpProgress = 0;
           rat.jointIndex = rat.targetJointIndex;
@@ -626,17 +627,27 @@ export function InteractivePipes() {
           if (rat.state === "hidden") {
             rat.timer--;
             if (rat.timer <= 0) {
-              // Rare 12% probability of triggering a parabolic leap jump!
-              const triggerJump = Math.random() < 0.12 && joints.length > 1;
+              // Rare 10% probability of triggering a gentle hop to a NEARBY joint!
+              const triggerJump = Math.random() < 0.10 && joints.length > 1;
 
               if (triggerJump) {
-                let candidateIdx = Math.floor(Math.random() * joints.length);
-                while (candidateIdx === rat.jointIndex && joints.length > 1) {
-                  candidateIdx = Math.floor(Math.random() * joints.length);
+                const jStart = joints[rat.jointIndex]!;
+                // Find neighboring joints within 220px
+                const neighbors = joints.filter((j, idx) => {
+                  if (idx === rat.jointIndex) return false;
+                  const d = Math.hypot(j.x - jStart.x, j.y - jStart.y);
+                  return d > 60 && d < 220;
+                });
+
+                if (neighbors.length > 0) {
+                  const chosen = neighbors[Math.floor(Math.random() * neighbors.length)]!;
+                  rat.targetJointIndex = joints.indexOf(chosen);
+                  rat.state = "jumping";
+                  rat.jumpProgress = 0;
+                } else {
+                  rat.jointIndex = Math.floor(Math.random() * joints.length);
+                  rat.state = "peeking";
                 }
-                rat.targetJointIndex = candidateIdx;
-                rat.state = "jumping";
-                rat.jumpProgress = 0;
               } else {
                 rat.jointIndex = Math.floor(Math.random() * joints.length);
                 rat.state = "peeking";
