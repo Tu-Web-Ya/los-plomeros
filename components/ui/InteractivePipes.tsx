@@ -43,8 +43,8 @@ export function InteractivePipes() {
 
     interface Roach {
       segIndex: number;
-      t: number; // 0 to 1 along segment
-      dir: number; // 1 or -1
+      t: number;
+      dir: number;
       speed: number;
       legPhase: number;
       size: number;
@@ -52,8 +52,10 @@ export function InteractivePipes() {
 
     interface Rat {
       jointIndex: number;
+      targetJointIndex: number;
       peekProgress: number;
-      state: "hidden" | "peeking" | "watching" | "ducking";
+      jumpProgress: number;
+      state: "hidden" | "peeking" | "watching" | "ducking" | "jumping";
       timer: number;
       whiskerPhase: number;
       lookOffset: number;
@@ -65,9 +67,11 @@ export function InteractivePipes() {
     let roaches: Roach[] = [];
     let rat: Rat = {
       jointIndex: -1,
+      targetJointIndex: -1,
       peekProgress: 0,
+      jumpProgress: 0,
       state: "hidden",
-      timer: 100,
+      timer: 120,
       whiskerPhase: 0,
       lookOffset: 0,
     };
@@ -183,18 +187,18 @@ export function InteractivePipes() {
         }
       }
 
-      // Initialize 4 Cockroaches on random pipe segments
+      // Initialize 3 Cockroaches on random pipe segments
       roaches = [];
       if (segments.length > 0) {
-        for (let i = 0; i < 4; i++) {
+        for (let i = 0; i < 3; i++) {
           const segIdx = Math.floor(Math.random() * segments.length);
           roaches.push({
             segIndex: segIdx,
             t: Math.random(),
             dir: Math.random() > 0.5 ? 1 : -1,
-            speed: 0.003 + Math.random() * 0.003,
+            speed: 0.0025 + Math.random() * 0.0025,
             legPhase: Math.random() * 10,
-            size: 9 + Math.random() * 3,
+            size: 8.5 + Math.random() * 2.5,
           });
         }
       }
@@ -202,6 +206,7 @@ export function InteractivePipes() {
       // Initialize Rat position
       if (joints.length > 0) {
         rat.jointIndex = Math.floor(Math.random() * joints.length);
+        rat.targetJointIndex = rat.jointIndex;
       }
     };
 
@@ -297,7 +302,7 @@ export function InteractivePipes() {
       ctx.restore();
     };
 
-    // Draw Detailed Little City Rat
+    // Draw Detailed Peeking City Rat
     const drawRat = (x: number, y: number, peekProgress: number, lookOffset: number, whiskerPhase: number) => {
       if (peekProgress <= 0.05) return;
 
@@ -378,6 +383,87 @@ export function InteractivePipes() {
       ctx.restore();
     };
 
+    // Draw Parabolic Jumping City Rat
+    const drawJumpingRat = (
+      x1: number,
+      y1: number,
+      x2: number,
+      y2: number,
+      progress: number
+    ) => {
+      const currentX = x1 + (x2 - x1) * progress;
+      const arcHeight = Math.sin(progress * Math.PI) * 48;
+      const currentY = y1 + (y2 - y1) * progress - arcHeight;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const angle = Math.atan2(dy, dx) + (progress - 0.5) * 0.4;
+
+      ctx.save();
+      ctx.translate(currentX, currentY);
+      ctx.rotate(angle);
+
+      // Trailing Pink Tail
+      ctx.strokeStyle = "#f472b6";
+      ctx.lineWidth = 2.2;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-10, 2);
+      ctx.quadraticCurveTo(-18, 6 + Math.sin(progress * 12) * 5, -24, 2);
+      ctx.stroke();
+
+      // Ears
+      ctx.fillStyle = "#52525b";
+      ctx.beginPath();
+      ctx.arc(-4, -8, 5.5, 0, Math.PI * 2);
+      ctx.arc(4, -8, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.arc(-4, -8, 3, 0, Math.PI * 2);
+      ctx.arc(4, -8, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Furry Body
+      ctx.fillStyle = "#3f3f46";
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 11, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Head
+      ctx.fillStyle = "#71717a";
+      ctx.beginPath();
+      ctx.arc(8, 1, 6, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Eye
+      ctx.fillStyle = "#09090b";
+      ctx.beginPath();
+      ctx.arc(9, -1, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(8.5, -1.6, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Nose
+      ctx.fillStyle = "#fb7185";
+      ctx.beginPath();
+      ctx.arc(13, 2, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Paws
+      ctx.fillStyle = "#f472b6";
+      ctx.beginPath();
+      ctx.arc(-2, 7, 2, 0, Math.PI * 2);
+      ctx.arc(4, 7, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    };
+
     // Main Render Loop
     const render = () => {
       if (document.hidden) {
@@ -423,18 +509,15 @@ export function InteractivePipes() {
         const seg = segments[r.segIndex];
         if (!seg) continue;
 
-        // Move along pipe
         const distToMouse = Math.hypot(
           mouseX - (seg.x1 + (seg.x2 - seg.x1) * r.t),
           mouseY - (seg.y1 + (seg.y2 - seg.y1) * r.t)
         );
 
-        // Scurry faster if mouse is near
         const currentSpeed = distToMouse < 90 ? r.speed * 2.8 : r.speed;
         r.t += currentSpeed * r.dir;
         r.legPhase += currentSpeed * 40;
 
-        // Switch segment at end
         if (r.t >= 1 || r.t <= 0) {
           r.dir *= -1;
           r.t = Math.max(0, Math.min(1, r.t));
@@ -457,7 +540,7 @@ export function InteractivePipes() {
         const mouseGlow = distToMouse < 240 ? 1 - distToMouse / 240 : 0;
 
         // Draw Little Rat peeking behind this joint
-        if (rat.jointIndex === i && rat.peekProgress > 0.05) {
+        if (rat.jointIndex === i && rat.peekProgress > 0.05 && rat.state !== "jumping") {
           drawRat(j.x, j.y, rat.peekProgress, rat.lookOffset, rat.whiskerPhase);
         }
 
@@ -512,7 +595,22 @@ export function InteractivePipes() {
         }
       }
 
-      // Update Rat State Machine
+      // Draw Jumping Rat in Mid-Air Parabolic Leap (Rare Event)
+      if (rat.state === "jumping" && joints[rat.jointIndex] && joints[rat.targetJointIndex]) {
+        const j1 = joints[rat.jointIndex]!;
+        const j2 = joints[rat.targetJointIndex]!;
+        drawJumpingRat(j1.x, j1.y, j2.x, j2.y, rat.jumpProgress);
+
+        rat.jumpProgress += 0.022;
+        if (rat.jumpProgress >= 1) {
+          rat.jumpProgress = 0;
+          rat.jointIndex = rat.targetJointIndex;
+          rat.state = "peeking";
+          rat.peekProgress = 0.6;
+        }
+      }
+
+      // Update Rat State Machine with Low Probability Jump Arc
       if (joints.length > 0) {
         const activeJoint = joints[rat.jointIndex];
         if (activeJoint) {
@@ -521,23 +619,35 @@ export function InteractivePipes() {
           rat.whiskerPhase += 0.1;
           rat.lookOffset = Math.sin(Date.now() * 0.002) * 0.8;
 
-          // Mouse scares rat back into pipe
-          if (distToMouse < 100 && rat.state !== "hidden") {
+          if (distToMouse < 100 && (rat.state === "peeking" || rat.state === "watching")) {
             rat.state = "ducking";
           }
 
           if (rat.state === "hidden") {
             rat.timer--;
             if (rat.timer <= 0) {
-              rat.jointIndex = Math.floor(Math.random() * joints.length);
-              rat.state = "peeking";
+              // Rare 12% probability of triggering a parabolic leap jump!
+              const triggerJump = Math.random() < 0.12 && joints.length > 1;
+
+              if (triggerJump) {
+                let candidateIdx = Math.floor(Math.random() * joints.length);
+                while (candidateIdx === rat.jointIndex && joints.length > 1) {
+                  candidateIdx = Math.floor(Math.random() * joints.length);
+                }
+                rat.targetJointIndex = candidateIdx;
+                rat.state = "jumping";
+                rat.jumpProgress = 0;
+              } else {
+                rat.jointIndex = Math.floor(Math.random() * joints.length);
+                rat.state = "peeking";
+              }
             }
           } else if (rat.state === "peeking") {
             rat.peekProgress += 0.05;
             if (rat.peekProgress >= 1) {
               rat.peekProgress = 1;
               rat.state = "watching";
-              rat.timer = 160;
+              rat.timer = 150;
             }
           } else if (rat.state === "watching") {
             rat.timer--;
@@ -549,7 +659,7 @@ export function InteractivePipes() {
             if (rat.peekProgress <= 0) {
               rat.peekProgress = 0;
               rat.state = "hidden";
-              rat.timer = 200 + Math.floor(Math.random() * 250);
+              rat.timer = 220 + Math.floor(Math.random() * 280);
             }
           }
         }

@@ -28,7 +28,8 @@
 - Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
 - Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
 - Se movió la imagen de fondo `hero-bg.jpg` de la raíz a la carpeta `public/` para solucionar la ruta 404 del hero en producción.
-- Se agregaron animaciones interactivas en `InteractivePipes.tsx`: cucarachitas realistas con 6 patas en movimiento y caparazón ámbar corriendo por los tubos (se aceleran si el cursor se acerca) y una ratita animada que se asoma aleatoriamente desde las válvulas/uniones (se esconde si se pasa el ratón cerca).
+- Se añadió una animación de salto parabólico de baja probabilidad (Easter Egg) para la ratita en `InteractivePipes.tsx`, donde ocasionalmente realiza un salto en arco en el aire entre dos tuberías con movimiento de cola y patitas encogidas antes de volver a ocultarse.
+
 
 
 
