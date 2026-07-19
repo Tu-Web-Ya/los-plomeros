@@ -22,3 +22,9 @@
   - Se actualizó el título de la pestaña del navegador en `index.html` a "Los Plomeros 24/7 | Servicio de Plomería de Emergencia en Puerto Rico".
 - Se reemplazó el archivo del logotipo en la web (`/public/logo.jpg`) con el logotipo oficial proporcionado por el cliente (el isotipo circular del plomero barbudo con gorra roja y llave de tubo), actualizándolo automáticamente en el header y los componentes de navegación.
 - Se integró la fotografía real y oficial de los tres técnicos de Los Plomeros (`/public/plumbers_team.jpg`) en el marco izquierdo de la sección "Sobre Nosotros", dotando a la página de autenticidad humana y cercanía con el público puertorriqueño.
+
+**[2026-07-19 - Sesión Antigravity]**
+- Se configuraron los scripts estándar (`dev`, `build`, `preview`) en `package.json` y se creó el archivo `.gitignore`.
+- Se inicializó y subió el repositorio local de Git a GitHub (`Tu-Web-Ya/los-plomeros`).
+- Se vinculó y desplegó exitosamente a producción en Vercel (`https://los-plomeros.vercel.app`) con webhook de auto-despliegue activo.
+
