@@ -62,21 +62,25 @@ export function InteractivePipes() {
       segments = [];
       joints = [];
 
-      const cols = Math.floor(width / 110) + 1;
-      const rows = Math.floor(height / 110) + 1;
+      const cols = Math.floor(width / 100) + 1;
+      const rows = Math.floor(height / 100) + 1;
       const spacingX = width / Math.max(1, cols);
       const spacingY = height / Math.max(1, rows);
 
-      // Strict Outer Border Margin (18% from screen edges)
-      const marginX = width * 0.18;
-      const marginY = height * 0.18;
+      const centerX = width / 2;
+      const centerY = height / 2;
+
+      // Perfectly balanced square clearance zone around center text (e.g. 560px x 560px)
+      const squareSize = Math.min(width * 0.52, height * 0.72, 600);
+      const clearWidth = squareSize;
+      const clearHeight = squareSize;
 
       const isInCenterZone = (px: number, py: number) => {
         return (
-          px > marginX &&
-          px < width - marginX &&
-          py > marginY &&
-          py < height - marginY
+          px > centerX - clearWidth / 2 &&
+          px < centerX + clearWidth / 2 &&
+          py > centerY - clearHeight / 2 &&
+          py < centerY + clearHeight / 2
         );
       };
 
@@ -85,13 +89,13 @@ export function InteractivePipes() {
           const x = c * spacingX;
           const y = r * spacingY;
 
-          // Strictly reject any point in the center 64% of screen
+          // Reject any point inside the center square
           if (isInCenterZone(x, y)) continue;
 
           const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.35;
           joints.push({ x, y, hasGauge, pressureVal: 0.4 + Math.random() * 0.5 });
 
-          // Horizontal pipe segment (must stay 100% outside center zone)
+          // Horizontal pipe segment (must stay outside center square)
           if (c < cols && Math.random() > 0.15) {
             const nextX = x + spacingX;
             if (
@@ -104,12 +108,12 @@ export function InteractivePipes() {
                 y1: y,
                 x2: nextX,
                 y2: y,
-                thickness: 10,
+                thickness: 9,
               });
             }
           }
 
-          // Vertical pipe segment (must stay 100% outside center zone)
+          // Vertical pipe segment (must stay outside center square)
           if (r < rows && Math.random() > 0.15) {
             const nextY = y + spacingY;
             if (
@@ -122,14 +126,14 @@ export function InteractivePipes() {
                 y1: y,
                 x2: x,
                 y2: nextY,
-                thickness: 10,
+                thickness: 9,
               });
             }
           }
         }
       }
 
-      // Initialize leaks on the outer framing pipe network
+      // Initialize leaks on the framing pipe network
       leaks = [];
       const shuffleJoints = [...joints].sort(() => Math.random() - 0.5);
       const numLeaks = Math.min(4, shuffleJoints.length);
@@ -226,7 +230,7 @@ export function InteractivePipes() {
         ctx.stroke();
       }
 
-      // 2. Draw Flange Joints & Pressure Gauges on Outer Edges
+      // 2. Draw Flange Joints & Pressure Gauges
       for (let i = 0; i < joints.length; i++) {
         const j = joints[i]!;
         const distToMouse = Math.hypot(mouseX - j.x, mouseY - j.y);
@@ -234,22 +238,22 @@ export function InteractivePipes() {
 
         // Flange Ring
         ctx.beginPath();
-        ctx.arc(j.x, j.y, 10, 0, Math.PI * 2);
+        ctx.arc(j.x, j.y, 9, 0, Math.PI * 2);
         ctx.fillStyle = mouseGlow > 0.15 ? "#ef4444" : "#3f3f46";
         ctx.fill();
 
         ctx.beginPath();
-        ctx.arc(j.x, j.y, 6, 0, Math.PI * 2);
+        ctx.arc(j.x, j.y, 5, 0, Math.PI * 2);
         ctx.fillStyle = "#18181b";
         ctx.fill();
 
         // 4 Hex Bolts
         for (let b = 0; b < 4; b++) {
           const bAngle = (b * Math.PI) / 2;
-          const bx = j.x + Math.cos(bAngle) * 7.5;
-          const by = j.y + Math.sin(bAngle) * 7.5;
+          const bx = j.x + Math.cos(bAngle) * 6.5;
+          const by = j.y + Math.sin(bAngle) * 6.5;
           ctx.beginPath();
-          ctx.arc(bx, by, 1.8, 0, Math.PI * 2);
+          ctx.arc(bx, by, 1.6, 0, Math.PI * 2);
           ctx.fillStyle = "#a1a1aa";
           ctx.fill();
         }
@@ -257,7 +261,7 @@ export function InteractivePipes() {
         // Pressure Gauge
         if (j.hasGauge) {
           ctx.beginPath();
-          ctx.arc(j.x, j.y - 18, 10, 0, Math.PI * 2);
+          ctx.arc(j.x, j.y - 16, 9, 0, Math.PI * 2);
           ctx.fillStyle = "#09090b";
           ctx.strokeStyle = "#52525b";
           ctx.lineWidth = 1.5;
@@ -266,7 +270,7 @@ export function InteractivePipes() {
 
           // Red Gauge Arc
           ctx.beginPath();
-          ctx.arc(j.x, j.y - 18, 7, -Math.PI * 0.2, Math.PI * 0.35);
+          ctx.arc(j.x, j.y - 16, 6, -Math.PI * 0.2, Math.PI * 0.35);
           ctx.strokeStyle = "#ef4444";
           ctx.lineWidth = 2;
           ctx.stroke();
@@ -274,10 +278,10 @@ export function InteractivePipes() {
           // Gauge Needle
           const needleAngle = -Math.PI * 0.75 + j.pressureVal * (Math.PI * 1.5);
           ctx.beginPath();
-          ctx.moveTo(j.x, j.y - 18);
+          ctx.moveTo(j.x, j.y - 16);
           ctx.lineTo(
-            j.x + Math.cos(needleAngle) * 6,
-            j.y - 18 + Math.sin(needleAngle) * 6
+            j.x + Math.cos(needleAngle) * 5.5,
+            j.y - 16 + Math.sin(needleAngle) * 5.5
           );
           ctx.strokeStyle = "#ef4444";
           ctx.lineWidth = 1.5;
@@ -285,7 +289,7 @@ export function InteractivePipes() {
         }
       }
 
-      // 3. Draw Leaks & Water Spray Particles on Outer Edges
+      // 3. Draw Leaks & Water Spray Particles
       for (let i = 0; i < leaks.length; i++) {
         const leak = leaks[i]!;
         const distToMouse = Math.hypot(mouseX - leak.x, mouseY - leak.y);
@@ -403,7 +407,6 @@ export function InteractivePipes() {
       animationFrameId = requestAnimationFrame(render);
     };
 
-    // Defer start slightly so initial splash loader tap animation gets 100% thread focus
     const timer = setTimeout(() => {
       render();
     }, 400);
