@@ -62,22 +62,21 @@ export function InteractivePipes() {
       segments = [];
       joints = [];
 
-      const cols = Math.floor(width / 130) + 1;
-      const rows = Math.floor(height / 130) + 1;
+      const cols = Math.floor(width / 110) + 1;
+      const rows = Math.floor(height / 110) + 1;
       const spacingX = width / Math.max(1, cols);
       const spacingY = height / Math.max(1, rows);
 
-      const centerX = width / 2;
-      const centerY = height / 2;
-      const clearWidth = Math.min(width * 0.65, 750);
-      const clearHeight = Math.min(height * 0.7, 520);
+      // Strict Outer Border Margin (18% from screen edges)
+      const marginX = width * 0.18;
+      const marginY = height * 0.18;
 
       const isInCenterZone = (px: number, py: number) => {
         return (
-          px > centerX - clearWidth / 2 &&
-          px < centerX + clearWidth / 2 &&
-          py > centerY - clearHeight / 2 &&
-          py < centerY + clearHeight / 2
+          px > marginX &&
+          px < width - marginX &&
+          py > marginY &&
+          py < height - marginY
         );
       };
 
@@ -86,14 +85,20 @@ export function InteractivePipes() {
           const x = c * spacingX;
           const y = r * spacingY;
 
+          // Strictly reject any point in the center 64% of screen
           if (isInCenterZone(x, y)) continue;
 
           const hasGauge = (r + c) % 3 === 0 && Math.random() > 0.35;
           joints.push({ x, y, hasGauge, pressureVal: 0.4 + Math.random() * 0.5 });
 
-          if (c < cols && Math.random() > 0.2) {
+          // Horizontal pipe segment (must stay 100% outside center zone)
+          if (c < cols && Math.random() > 0.15) {
             const nextX = x + spacingX;
-            if (!isInCenterZone((x + nextX) / 2, y)) {
+            if (
+              !isInCenterZone(x, y) &&
+              !isInCenterZone(nextX, y) &&
+              !isInCenterZone((x + nextX) / 2, y)
+            ) {
               segments.push({
                 x1: x,
                 y1: y,
@@ -104,9 +109,14 @@ export function InteractivePipes() {
             }
           }
 
-          if (r < rows && Math.random() > 0.2) {
+          // Vertical pipe segment (must stay 100% outside center zone)
+          if (r < rows && Math.random() > 0.15) {
             const nextY = y + spacingY;
-            if (!isInCenterZone(x, (y + nextY) / 2)) {
+            if (
+              !isInCenterZone(x, y) &&
+              !isInCenterZone(x, nextY) &&
+              !isInCenterZone(x, (y + nextY) / 2)
+            ) {
               segments.push({
                 x1: x,
                 y1: y,
@@ -119,7 +129,7 @@ export function InteractivePipes() {
         }
       }
 
-      // Initialize leaks on the framing pipe network
+      // Initialize leaks on the outer framing pipe network
       leaks = [];
       const shuffleJoints = [...joints].sort(() => Math.random() - 0.5);
       const numLeaks = Math.min(4, shuffleJoints.length);
@@ -156,7 +166,7 @@ export function InteractivePipes() {
     window.addEventListener("resize", handleResize);
     window.addEventListener("mousemove", handleMouseMove);
 
-    // Stilson Wrench Drawer
+    // Stilson Wrench Cursor Drawer
     const drawHDWrench = (x: number, y: number, rot: number) => {
       ctx.save();
       ctx.translate(x + 16, y - 16);
@@ -216,7 +226,7 @@ export function InteractivePipes() {
         ctx.stroke();
       }
 
-      // 2. Draw Flange Joints & Pressure Gauges
+      // 2. Draw Flange Joints & Pressure Gauges on Outer Edges
       for (let i = 0; i < joints.length; i++) {
         const j = joints[i]!;
         const distToMouse = Math.hypot(mouseX - j.x, mouseY - j.y);
@@ -275,7 +285,7 @@ export function InteractivePipes() {
         }
       }
 
-      // 3. Draw Leaks & Water Spray Particles
+      // 3. Draw Leaks & Water Spray Particles on Outer Edges
       for (let i = 0; i < leaks.length; i++) {
         const leak = leaks[i]!;
         const distToMouse = Math.hypot(mouseX - leak.x, mouseY - leak.y);
